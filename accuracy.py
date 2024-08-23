@@ -1,62 +1,66 @@
 import pandas as pd
 import numpy as np
 
-# Load the Excel files
-final_output = pd.read_excel('final_output.xlsx')
+# Load your data
 output_file = pd.read_excel('Output File.xlsx')
+final_output = pd.read_excel('final_output.xlsx')
 
-# Ensure both DataFrames have the same columns, ignoring the order
-final_output = final_output.sort_index(axis=1)
-output_file = output_file.sort_index(axis=1)
+# Print the first few rows of each file to understand the structure
+print("Output File Head:")
+print(output_file.head(5))
+print("\nFinal Output Head:")
+print(final_output.head(5))
 
-# Reindex both DataFrames to have the same columns and indices
-all_columns = final_output.columns.union(output_file.columns)
-all_indices = final_output.index.union(output_file.index)
+# Standardize column names
+output_file.columns = output_file.columns.str.lower().str.replace(' ', '_')
+final_output.columns = final_output.columns.str.lower().str.replace(' ', '_')
 
-final_output = final_output.reindex(index=all_indices, columns=all_columns)
-output_file = output_file.reindex(index=all_indices, columns=all_columns)
+# Convert '-' and other missing values to NaN for both dataframes
+output_file.replace('-', np.nan, inplace=True)
+final_output.replace('-', np.nan, inplace=True)
 
-# Fill missing values with NaN
-final_output = final_output.fillna(np.nan)
-output_file = output_file.fillna(np.nan)
+# Normalize case for all text columns in both dataframes
+text_columns = ['voter_full_name', 'relative\'s_name', 'relation_type', 'gender', 'house_no']
 
-# Standardize text data by stripping whitespace and converting to lowercase
-for col in final_output.columns:
-    if final_output[col].dtype == object:
-        final_output[col] = final_output[col].str.strip().str.lower()
-    if output_file[col].dtype == object:
-        output_file[col] = output_file[col].str.strip().str.lower()
+for col in text_columns:
+    if col in output_file.columns:
+        output_file[col] = output_file[col].astype(str).str.upper().str.strip()
+    if col in final_output.columns:
+        final_output[col] = final_output[col].astype(str).str.upper().str.strip()
 
-# Handle data type consistency carefully
-for col in final_output.columns:
-    if final_output[col].dtype != output_file[col].dtype:
-        try:
-            if pd.api.types.is_numeric_dtype(final_output[col]) and pd.api.types.is_numeric_dtype(output_file[col]):
-                final_output[col] = pd.to_numeric(final_output[col], errors='coerce')
-                output_file[col] = pd.to_numeric(output_file[col], errors='coerce')
-            elif pd.api.types.is_string_dtype(final_output[col]) and pd.api.types.is_string_dtype(output_file[col]):
-                final_output[col] = final_output[col].astype(str)
-                output_file[col] = output_file[col].astype(str)
-        except ValueError as e:
-            print(f"Error converting column '{col}': {e}")
-            continue
+# Convert 'epic_no' to string in both dataframes for consistent merging
+output_file['epic_no'] = output_file['epic_no'].astype(str)
+final_output['epic_no'] = final_output['epic_no'].astype(str)
 
-# Compare the dataframes
-comparison = final_output == output_file
+# Merge dataframes
+merged_df = output_file.merge(final_output, how='left', left_on='epic_no', right_on='epic_no', suffixes=('_output', '_final'), indicator=True)
+
+# Find missing rows
+missing_rows = merged_df.query('_merge == "left_only"').drop('_merge', axis=1)
+
+# Print missing rows to check
+print("Missing Rows:")
+print(missing_rows)
+
+# Create a comparison DataFrame to find rows with incorrect values
+comparison_df = merged_df[merged_df['_merge'] == 'both'].copy()
+
+# Compare columns and create a DataFrame with boolean results
+comparison_df['match'] = True
+for col in output_file.columns:
+    if col != 'epic_no':  # Skip 'epic_no' since it's used for merging
+        comparison_df['match'] &= comparison_df[col + '_output'].fillna(np.nan) == comparison_df[col + '_final'].fillna(np.nan)
+
+# Find rows with mismatches
+mismatch_rows = comparison_df[~comparison_df['match']].drop('match', axis=1)
+
+# Print rows with mismatches
+print("Rows with Mismatches:")
+print(mismatch_rows)
+
+# Save mismatched rows to an Excel file
+mismatch_rows.to_excel('mismatched_rows.xlsx', index=False)
 
 # Calculate accuracy
-correct_matches = comparison.values.sum()
-total_values = comparison.size
-accuracy = correct_matches / total_values
-
-# Summary of differences
-differences = final_output[~comparison].combine_first(output_file[~comparison])
-
-print(f"Accuracy: {accuracy * 100:.2f}%")
-print(f"Number of differences: {total_values - correct_matches}")
-print("Differences found (if any):")
-print(differences)
-
-# Save differences to a new Excel file if needed
-differences.to_excel('differences.xlsx', index=False)
-print("Differences have been saved to 'differences.xlsx'.")
+accuracy = comparison_df['match'].mean() if comparison_df.shape[0] > 0 else np.nan
+print(f"Accuracy: {accuracy}")
