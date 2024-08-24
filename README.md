@@ -27,10 +27,10 @@ To validate the accuracy of the data extraction and transformation process, a co
 The accuracy of the solution was calculated by comparing the rows in both files. If a row matched across all columns, it was considered accurate. The final accuracy achieved by the solution was over 90%, demonstrating the effectiveness of the approach.
 
 ## Challenges Faced
-####Handling Irregularities in Text Extraction: 
+Handling Irregularities in Text Extraction: 
 Extracting structured data from images is challenging due to variations in text alignment, font, and other formatting inconsistencies. While traditional OCR methods like Tesseract and CV2 were considered, they were found insufficient for achieving the desired accuracy without extensive training data. Google Generative AI was selected as it provided a more accurate and reliable method for parsing the image content.
 
-####Ensuring Data Consistency:
+Ensuring Data Consistency:
 Converting the extracted data into a consistent format that aligned with the provided Excel file required careful handling of text cases, missing values, and column names. These challenges were addressed by implementing robust data cleaning and transformation steps.
 
 ## Conclusion
