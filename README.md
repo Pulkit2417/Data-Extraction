@@ -6,7 +6,7 @@ This project involves developing a solution to extract data from a PDF file cont
 
 ## Problem Breakdown
 
-The task involved working with a PDF file that contained the electoral roll data of 30 individuals, some of whom were marked as deleted. The objective was to extract the details of the individuals not marked as deleted and organize them in a structured format consistent with a provided sample Excel file.
+The task involved working with a PDF file that contained the electoral roll data, some of whom were marked as deleted. The objective was to extract the details of the individuals not marked as deleted and organize them in a structured format consistent with a provided sample Excel file.
 
 ## Solution Approach
 
